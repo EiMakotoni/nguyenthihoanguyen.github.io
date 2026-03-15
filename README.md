@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinh nhật hạnh phúc</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Francois+One&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Cài đặt chung --- */
+        * { box-sizing: border-box; }
+        body, html { 
+            margin: 0; padding: 0; 
+            font-family: 'Baloo 2', cursive, sans-serif; 
+            font-size: 18px; 
+            background-color: #E8F0FE; color: #2C3E50; 
+            overflow: hidden; 
+        }
+
+        h1, h2, h3, .node {
+            font-family: 'Francois One', sans-serif;
+            font-weight: normal; 
+            letter-spacing: 1px;
+        }
+
+        /* --- Ép hiển thị ngang trên thiết bị di động --- */
+        @media (orientation: portrait) {
+            #portrait-warning {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: #FF9AA2; color: #fff; z-index: 9999;
+                display: flex; justify-content: center; align-items: center;
+                text-align: center; padding: 20px; font-size: 1.5rem;
+                font-family: 'Francois One', sans-serif;
+            }
+            .screen { opacity: 0 !important; visibility: hidden !important; }
+            #loading-wrapper { display: none !important; } 
+        }
+        @media (orientation: landscape) {
+            #portrait-warning { display: none; }
+        }
+
+        /* --- Quản lý các màn hình --- */
+        .screen {
+            position: absolute; top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            overflow-y: auto; overflow-x: hidden; 
+            background-color: #E8F0FE; 
+            scroll-behavior: smooth;
+            
+            opacity: 0; 
+            visibility: hidden;
+            transition: opacity 2s ease-in-out, visibility 2s ease-in-out;
+            z-index: 1;
+        }
+        
+        .screen.active { 
+            opacity: 1; 
+            visibility: visible; 
+            z-index: 10; 
+        }
+
+        /* --- Màn hình LOADING --- */
+        #loading-wrapper {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: #E8F0FE; 
+            z-index: 1000; 
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 5s ease-out, transform 5s ease-out;
+            will-change: opacity, transform;
+        }
+
+        #loading-wrapper.fade-out-up {
+            opacity: 0;
+            transform: translateY(-100vh); 
+            pointer-events: none; 
+        }
+
+        .loading-container {
+            width: 400px; padding: 40px;
+            background: #FFFFFF;
+            border: 2px solid #FF9AA2; 
+            border-radius: 20px; 
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(255, 154, 162, 0.2);
+        }
+
+        .loading-container h2 { font-size: 2rem; margin-top: 0; }
+
+        .progress-container {
+            width: 100%; height: 12px; background: #f0f0f0; 
+            border-radius: 6px; margin-top: 25px; overflow: hidden;
+            border: 1px solid #ddd;
+        }
+        #progress-bar {
+            width: 0%; height: 100%; background: #FF9AA2; 
+            transition: width 0.1s linear;
+        }
+
+        /* ========================================= */
+        /* --- Màn hình Menu Mindmap --- */
+        /* ========================================= */
+        #mindmap-screen {
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 40px; 
+            padding: 20px;
+        }
+        
+        .menu-nodes-container {
+            display: flex; justify-content: center; align-items: center; 
+            gap: 100px; flex-wrap: wrap;
+        }
+
+        .greeting-text {
+            font-family: 'Baloo 2', cursive, sans-serif;
+            font-size: 6rem; 
+            font-weight: 700;
+            font-style: italic; 
+            color: #2C3E50;
+            text-align: center;
+            margin: 0;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.05);
+        }
+
+        .math-power {
+            font-size: 3rem; 
+            color: #2C3E50; 
+            font-weight: 700;
+        }
+
+        .multiply-sign {
+            font-size: 0.75em;
+            margin: 0 4px;
+            color: #2C3E50; 
+        }
+
+        .node {
+            padding: 25px 45px; background: #FFFFFF; 
+            border: 2px solid #FF9AA2; border-radius: 12px; 
+            font-size: 1.6rem; cursor: pointer; color: #2C3E50;
+            text-align: center; box-shadow: 0 4px 15px rgba(255, 154, 162, 0.15);
+            transition: all 2s ease; 
+        }
+        
+        .node:hover {
+            transform: scale(1.05); background: #FF9AA2; color: #FFFFFF;
+        }
+
+        /* --- Nội dung chung --- */
+        .content-wrapper { display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
+        .content-wrapper h2 { font-size: 2.5rem; color: #FF9AA2; margin-bottom: 30px; }
+        .spacer { height: 70vh; display: flex; justify-content: center; align-items: center; color: #888; font-style: italic; text-align: center;}
+        
+        .image-box {
+            width: 80%; max-width: 800px; height: 400px; 
+            background: transparent; 
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 20px;
+        }
+        .info-board, .letter-content {
+            width: 80%; max-width: 800px; padding: 40px; 
+            background: #FFFFFF; border-left: 5px solid #FF9AA2;
+            border-radius: 8px; line-height: 1.6; font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- Nút cuộn xuống --- */
+        .return-trigger { height: 50px; width: 100%; margin-top: 50px; }
+        .scroll-hint {
+            position: fixed; bottom: 20px; right: 20px; opacity: 0.6; pointer-events: none; 
+            animation: slowBounce 2s infinite ease-in-out; color: #666; font-weight: 600;
+        }
+        @keyframes slowBounce {
+            0%, 100% { transform: translateY(0); opacity: 0.2; }
+            50% { transform: translateY(-15px); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="portrait-warning">VUI LÒNG XOAY NGANG THIẾT BỊ</div>
+
+    <div id="loading-wrapper">
+        <div class="loading-container">
+            <h2>Đang tải dữ liệu... <span id="loading-text">0</span>%</h2>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mindmap-screen" class="screen">
+        <div class="greeting-text">Sinh nhật vui vẻ</div>
+        
+        <div class="menu-nodes-container">
+            <div class="node" onclick="showScreen('section1')">Ngày này 18 năm trước</div>
+            <div class="node" onclick="showScreen('section2')">Mail</div>
+        </div>
+
+        <div class="greeting-text">
+            nhaaaaaaaaaaaaa<sup class="math-power">10<span class="multiply-sign">x</span>e!</sup>
+        </div>
+    </div>
+
+    <div id="section1" class="screen">
+        <div class="content-wrapper">
+            <h2>Astronomy Picture of the Day</h2>
+            <div class="image-box">
+                <img src="https://apod.nasa.gov/apod/image/0803/IstanbulNewMoon_tezel.jpg" alt="Istanbul New Moon 2008" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            </div>
+            <div class="spacer">↓ Lướt xuống để xem thêm ↓</div>
+            <div class="info-board">
+                <h3>Vầng trăng trên bầu trời Byzantium</h3>
+                <p>Đây là bức ảnh Thiên văn của Ngày do NASA công bố đúng vào ngày này 18 năm trước. Bức ảnh chụp lại một vầng trăng khuyết mỏng manh nhưng kiêu hãnh lơ lửng trên bầu trời hoàng hôn của thành phố Istanbul cổ kính. Mong rằng tuổi mới của em cũng sẽ luôn rạng rỡ và bình yên như vầng trăng ngày hôm ấy.</p>
+            </div>
+            <div class="spacer">↓ Lướt xuống để quay về Menu ↓</div>
+            <div class="return-trigger" id="trigger1"></div>
+        </div>
+        <div class="scroll-hint">↓ Cuộn xuống</div>
+    </div>
+
+    <div id="section2" class="screen">
+        <div class="content-wrapper">
+            <h2>Thư ngỏ</h2>
+            <div class="letter-content">
+                <p>Xin chào em nhaa, hôm nay là ngày sinh nhật của em ha. Lời chào cao hơn mâm cỗ;</p>
+                <p>Anh chúc em tuổi mới ngày càng xinh đẹp hạnh phúc, những nguyện vọng của em sẽ thành hiện thực ước đâu được đó, đi thi thì những câu nào không biết thì em sẽ luôn khoanh đúng, ngày nào cũng là ngày hạnh phúc, nhan sắc thăng hạng, make up không bao giờ bị fail, kẻ eyeliner 1 lần duy nhất, sắp tới sẽ có kỳ thi THPTQG anh mong cho em điểm đúng với mục tiêu đã đề ra, nguyện vọng 1 là cái chắc!</p>
+                <p>Hihi khum biết gì chỉ bíc chúc em nhiều thiệt nhiều bởi lẽ lời chúc sẽ được vũ trụ ghi nhận và sẽ thêm vào danh sách lần lượt hóa hiện thực đóa!!!</p>
+            </div>
+            <div class="spacer">↓ Lướt xuống để quay về Menu ↓</div>
+            <div class="return-trigger" id="trigger2"></div>
+        </div>
+        <div class="scroll-hint">↓ Cuộn xuống</div>
+    </div>
+
+    <script>
+        // --- Logic Loading ---
+        let loadProgress = 0;
+        const loadingWrapper = document.getElementById('loading-wrapper');
+        const loadingText = document.getElementById('loading-text');
+        const progressBar = document.getElementById('progress-bar');
+
+        const loadingInterval = setInterval(() => {
+            loadProgress += Math.floor(Math.random() * 8) + 1; 
+            if (loadProgress >= 100) {
+                loadProgress = 100;
+                clearInterval(loadingInterval);
+                setTimeout(() => {
+                    loadingWrapper.classList.add('fade-out-up');
+                    showScreen('mindmap-screen');
+                    setTimeout(() => { loadingWrapper.style.display = 'none'; }, 5000); 
+                }, 500); 
+            }
+            loadingText.innerText = loadProgress;
+            progressBar.style.width = loadProgress + '%';
+        }, 60);
+
+        // --- Logic Chuyển Màn Hình ---
+        let canTriggerReturn = false; 
+        let isAnimating = false; 
+
+        function showScreen(screenId) {
+            if (isAnimating) return; 
+            
+            isAnimating = true; 
+            canTriggerReturn = false; 
+
+            document.querySelectorAll('.screen').forEach(screen => {
+                if (screen.id !== screenId && screen.classList.contains('active')) {
+                    screen.classList.remove('active');
+                    setTimeout(() => { screen.scrollTop = 0; }, 2000);
+                }
+            });
+            
+            const targetScreen = document.getElementById(screenId);
+            if (!targetScreen.classList.contains('active')) {
+                targetScreen.scrollTop = 0;
+            }
+            targetScreen.classList.add('active'); 
+            
+            setTimeout(() => {
+                canTriggerReturn = true;
+                isAnimating = false; 
+            }, 2000);
+        }
+
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && canTriggerReturn) {
+                    const parentScreen = entry.target.closest('.screen');
+                    if (parentScreen && parentScreen.classList.contains('active')) {
+                        showScreen('mindmap-screen');
+                    }
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.return-trigger').forEach(trigger => {
+            observer.observe(trigger);
+        });
+    </script>
+</body>
+</html>
